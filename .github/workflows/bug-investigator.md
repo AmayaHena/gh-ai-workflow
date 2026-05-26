@@ -1,11 +1,6 @@
 ---
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch to audit for bugs"
-        required: true
-        type: string
 permissions:
   contents: read
   actions: read
@@ -51,23 +46,22 @@ Usage:
 
 **Expected behavior**: multiples of 3 → `Fizz`, multiples of 5 → `Buzz`, multiples of both 3 and 5 → `FizzBuzz`, everything else → the number as a string.
 
-## Input
+## Target branch
 
-The target branch is `${{ github.event.inputs.branch }}`. Check it out before doing anything else:
+The workflow runs against whatever branch GitHub Actions checked out (the "Use workflow from" selector at dispatch time). Determine it with:
 
 ```sh
-git fetch origin "${{ github.event.inputs.branch }}"
-git checkout "${{ github.event.inputs.branch }}"
+TARGET_BRANCH="${GITHUB_REF_NAME}"
+echo "Auditing branch: $TARGET_BRANCH"
 ```
 
-If the branch doesn't exist on the remote, stop immediately and write a short failure message — do not open a PR.
+Use `$TARGET_BRANCH` anywhere this report references the audited branch.
 
 ## Overall Workflow
 
-1. **Check out the target branch** (see above).
-2. **Audit the code** on that branch (see Step 1 below). Compare actual behavior against the expected FizzBuzz behavior in Domain Context.
-3. **Pick the single most impactful bug.** If you find none, stop and write a short "no bugs found" summary.
-4. **Fix it on a new branch** based on the target branch, with a regression test, and open a PR back into the target branch.
+1. **Audit the code** on the checked-out branch (see Step 1 below). Compare actual behavior against the expected FizzBuzz behavior in Domain Context.
+2. **Pick the single most impactful bug.** If you find none, stop and write a short "no bugs found" summary.
+3. **Fix it on a new branch** based on the checked-out branch, with a regression test, and open a PR back into that branch.
 
 ## Available Tools
 
@@ -124,7 +118,7 @@ Write a concise markdown report with these sections — drop any that are empty 
 
 ### Step 5 — Create the fix PR
 
-1. Create a new branch off the target branch named `fix/<short-slug>-on-<target_branch>`.
+1. Create a new branch off the checked-out branch named `fix/<short-slug>-on-<branch>`.
 2. Apply the fix using `edit`. Keep the diff minimal — fix this one bug, nothing else. Do not refactor surrounding code, rename variables, or add unrelated comments.
 3. Add or update a test in `main_test.go` that fails before the fix and passes after.
 4. **Verify locally** before pushing:
@@ -132,12 +126,12 @@ Write a concise markdown report with these sections — drop any that are empty 
    - `go vet ./...`
    - `go test ./...` must pass
 5. Use `push-to-pull-request-branch` to push.
-6. Use `create-pull-request` targeting the input branch as the base, with this body:
+6. Use `create-pull-request` targeting the audited branch as the base, with this body:
 
 ````markdown
 ## Context
 
-Audit of branch `<target_branch>` found a bug in FizzBuzz output.
+Audit of branch `<branch>` found a bug in FizzBuzz output.
 
 <Brief explanation: what fails, when, impact.>
 
