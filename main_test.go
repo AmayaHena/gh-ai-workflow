@@ -16,6 +16,8 @@ func TestFizzbuzz(t *testing.T) {
 		{7, "7"},
 		{9, "Fizz"},
 		{10, "Buzz"},
+		{15, "FizzBuzz"},
+		{30, "FizzBuzz"},
 	}
 	for _, c := range cases {
 		if got := fizzbuzz(c.in); got != c.want {
